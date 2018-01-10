@@ -48,6 +48,7 @@ and then a real command to add to your crontab :
 ./netatmo2MQTT.py -c '<CLIENT_ID>' -a '<CLIENT_SECRET>' -r '<REFRESH_TOKEN>'
 ```
 
+The secrets can also be set with environment variables, see the help for more detail.
 
 ## Help
 
@@ -63,11 +64,14 @@ broker.
 optional arguments:
   -h, --help            show this help message and exit
   -a NACLIENTSECRET, --client-secret NACLIENTSECRET
-                        NetAtmo Client Secret. (default: None)
+                        NetAtmo Client Secret / Can also be read from
+                        NETATMO_CLIENT_SECRET env var. (default: None)
   -c NACLIENTID, --client-id NACLIENTID
-                        NetAtmo Client ID. (default: None)
+                        NetAtmo Client ID / Can also be read from
+                        NETATMO_CLIENT_ID en var. (default: None)
   -r NAREFRESHTOKEN, --refresh-token NAREFRESHTOKEN
-                        NetAtmo Refresh Token. (default: None)
+                        NetAtmo Refresh Token / Can also be read from
+                        NETATMO_REFRESH_TOKEN en var. (default: None)
   -m HOST, --mqtt-host HOST
                         Specify the MQTT host to connect to. (default:
                         127.0.0.1)
@@ -91,7 +95,7 @@ optional arguments:
 
 ## Other things to know
 
-I personaly use cron to start this program so as I want to keep the latest timestamp received from the API, I store it by default in `/tmp/netatmo_last` (you can change it through a command line parameter. 
+I personaly use cron to start this program so as I want to keep the latest timestamp received from the API, I store it by default in `/tmp/netatmo_last` (you can change it through a command line parameter.
 
 # Limits
 
@@ -101,4 +105,4 @@ I personaly use cron to start this program so as I want to keep the latest times
 # License
 
 This program is licenced with GNU GENERAL PUBLIC LICENSE version 3 by Free Software Foundation, Inc.
- 
+

@@ -34,6 +34,12 @@ def debug(msg):
   if verbose:
     print (msg + "\n")
 
+def environ_or_required(key):
+  if os.environ.get(key):
+      return {'default': os.environ.get(key)}
+  else:
+      return {'required': True}
+
 def getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken):
   tstamp = int(time.time())
   payload = {
@@ -107,12 +113,12 @@ def getNetAtmoThermostat(oldTimestamp, naClientId, naClientSecret, naRefreshToke
 
 
 parser = argparse.ArgumentParser(description='Read current temperature and setpoint from NetAtmo API and send them to a MQTT broker.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-a', '--client-secret', dest='naClientSecret', action="store", required=True,
-                   help='NetAtmo Client Secret.')
-parser.add_argument('-c', '--client-id', dest='naClientId', action="store", required=True,
-                   help='NetAtmo Client ID.')
-parser.add_argument('-r', '--refresh-token', dest='naRefreshToken', action="store", required=True,
-                   help='NetAtmo Refresh Token.')
+parser.add_argument('-a', '--client-secret', dest='naClientSecret', action="store", help='NetAtmo Client Secret / Can also be read from NETATMO_CLIENT_SECRET env var.',
+                   **environ_or_required('NETATMO_CLIENT_SECRET'))
+parser.add_argument('-c', '--client-id', dest='naClientId', action="store", help='NetAtmo Client ID / Can also be read from NETATMO_CLIENT_ID en var.',
+                   **environ_or_required('NETATMO_CLIENT_ID'))
+parser.add_argument('-r', '--refresh-token', dest='naRefreshToken', action="store", help='NetAtmo Refresh Token / Can also be read from NETATMO_REFRESH_TOKEN en var.',
+                   **environ_or_required('NETATMO_REFRESH_TOKEN'))
 parser.add_argument('-m', '--mqtt-host', dest='host', action="store", default="127.0.0.1",
                    help='Specify the MQTT host to connect to.')
 parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", default=False,
