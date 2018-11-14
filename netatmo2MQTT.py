@@ -96,7 +96,7 @@ def getNetAtmoThermostat(oldTimestamp, naClientId, naClientSecret, naRefreshToke
     data = r.json()
     if r.status_code != 200 or not 'devices' in data['body'] or not 'modules' in data['body']['devices'][0]:
       debug ("NetAtmo error while reading thermostat response {0}".format(json.dumps(data)))
-      return (False, {"time": tstamp, "message": "OpenWeatherMap data not well formed"}, {})
+      return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
     latestTime = int(data['body']['devices'][0]['modules'][0]['measured']['time'])
     newObject = [{"time": latestTime,
                  "temp": data['body']['devices'][0]['modules'][0]['measured']['temperature']}]
