@@ -97,6 +97,27 @@ optional arguments:
 
 I personaly use cron to start this program so as I want to keep the latest timestamp received from the API, I store it by default in `/tmp/netatmo_last` (you can change it through a command line parameter.
 
+## Docker
+
+I added a sample Dockerfile, I personaly use it with a `docker-compose.yml` like this one :
+
+```yml
+version: '3'
+
+services:
+  netatmo2mqtt:
+    build: https://github.com/seblucas/netatmo2mqtt.git
+    image: netatmo-python3-cron:latest
+    restart: always
+    environment:
+      NETATMO_CLIENT_SECRET: XXX
+      NETATMO_CLIENT_ID: XXX
+      NAREFRESHTOKEN: XXX
+      CRON_STRINGS: "46 * * * * netatmo2MQTT.py -m mosquitto -t sensor/netatmo"
+      CRON_LOG_LEVEL: 8
+```
+
+
 # Limits
 
  * This program only handles Thermostat for now (PR welcome for other sensors)
