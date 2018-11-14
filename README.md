@@ -112,7 +112,7 @@ services:
     environment:
       NETATMO_CLIENT_SECRET: XXX
       NETATMO_CLIENT_ID: XXX
-      NAREFRESHTOKEN: XXX
+      NETATMO_REFRESH_TOKEN: XXX
       CRON_STRINGS: "46 * * * * netatmo2MQTT.py -m mosquitto -t sensor/netatmo"
       CRON_LOG_LEVEL: 8
 ```
