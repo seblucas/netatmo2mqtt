@@ -27,8 +27,8 @@ import paho.mqtt.publish as publish # pip install paho-mqtt
 
 verbose = False
 NETATMO_GETTHERMOSTATDATA_URL = 'https://api.netatmo.com/api/getthermostatsdata?access_token={0}'
-NETATMO_OAUTH_URL = 'https://api.netatmo.com/oauth2/token';
-NETATMO_GETMEASURE_URL = 'https://api.netatmo.com/api/getmeasure';
+NETATMO_OAUTH_URL = 'https://api.netatmo.com/oauth2/token'
+NETATMO_GETMEASURE_URL = 'https://api.netatmo.com/api/getmeasure'
 
 def debug(msg):
   if verbose:
@@ -136,11 +136,11 @@ parser.add_argument('-v', '--verbose', dest='verbose', action="store_true", defa
 
 
 args = parser.parse_args()
-verbose = args.verbose;
+verbose = args.verbose
 
 oldTimestamp = 0
 if os.path.isfile(args.previousFilename):
-  oldTimestamp = int(open(args.previousFilename).read(10));
+  oldTimestamp = int(open(args.previousFilename).read(10))
 
 
 status, dataArray, dataSetpointArray = getNetAtmoThermostat(oldTimestamp, args.naClientId, args.naClientSecret, args.naRefreshToken)
