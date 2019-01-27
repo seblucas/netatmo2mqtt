@@ -26,7 +26,7 @@ import requests                     # pip install requests
 import paho.mqtt.publish as publish # pip install paho-mqtt
 
 verbose = False
-NETATMO_BASE_URL = 'https://api.netatmo.com/api"
+NETATMO_BASE_URL = 'https://api.netatmo.com/api'
 NETATMO_GETTHERMOSTATDATA_URL = 'https://api.netatmo.com/api/getthermostatsdata?access_token={0}'
 NETATMO_HOMESDATA_URL = NETATMO_BASE_URL + '/homesdata'
 NETATMO_HOMESTATUS_URL = NETATMO_BASE_URL + '/homestatus'
@@ -62,7 +62,7 @@ def getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken):
   except requests.exceptions.RequestException as e:
     return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)})
 
-def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceId, moduleId):
+def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceId, moduleId, tstamp):
   params = {
     'access_token': accessToken,
     'device_id'   : deviceId,
@@ -77,10 +77,10 @@ def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceI
     data = r.json()
     if r.status_code != 200:
       return (False, {"time": tstamp, "message": "NetAtmo error while getting all measures"})
-    if len(data['body']) == 0:
-      return (False, {"time": tstamp, "message": "No new data"}, {})
     temperatureList = []
     setpointList = []
+    if len(data['body']) == 0:
+      return (True, temperatureList, setpointList)
     for measure in data['body']:
       temperatureList.append({'time': measure['beg_time'], 'temp': measure['value'][0][0]})
       setpointList.append({'time': measure['beg_time'], 'temp': measure['value'][0][1]})
@@ -102,7 +102,7 @@ def getNetAtmoThermostat(oldTimestamp, naClientId, naClientSecret, naRefreshToke
       debug ("NetAtmo error while reading thermostat response {0}".format(json.dumps(data)))
       return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
     status, temperatureList, setpointList = getNetAtmoThermostatMeasure(oldTimestamp, tstamp, accessToken,
-      data['body']['homes'][0]['modules'][0]['id'], data['body']['homes'][0]['modules'][1]['id'])
+      data['body']['homes'][0]['modules'][0]['id'], data['body']['homes'][0]['modules'][1]['id'], tstamp)
     return (status, temperatureList, setpointList)
   except requests.exceptions.RequestException as e:
     return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
