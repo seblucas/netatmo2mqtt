@@ -27,11 +27,10 @@ import paho.mqtt.publish as publish # pip install paho-mqtt
 
 verbose = False
 NETATMO_BASE_URL = 'https://api.netatmo.com/api'
-NETATMO_GETTHERMOSTATDATA_URL = 'https://api.netatmo.com/api/getthermostatsdata?access_token={0}'
 NETATMO_HOMESDATA_URL = NETATMO_BASE_URL + '/homesdata'
 NETATMO_HOMESTATUS_URL = NETATMO_BASE_URL + '/homestatus'
 NETATMO_OAUTH_URL = 'https://api.netatmo.com/oauth2/token'
-NETATMO_GETMEASURE_URL = 'https://api.netatmo.com/api/getmeasure'
+NETATMO_GETMEASURE_URL = NETATMO_BASE_URL + '/getmeasure'
 
 def debug(msg):
   if verbose:
