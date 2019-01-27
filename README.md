@@ -10,6 +10,8 @@ The main reason is security : most of the tools I reviewed are still asking for 
 
 The other reason is that the thermostat is synchronized [only every hour](https://dev.netatmo.com/resources/technical/guides/ratelimits) so simply using [getthermostatsdata](https://dev.netatmo.com/resources/technical/reference/thermostat/getthermostatsdata) was not enough for me (make a graph with a measure every hour is not very precise). So I finally used [getmeasure](https://dev.netatmo.com/resources/technical/reference/common/getmeasure) in addition to provide all the missing detail with a measure every 10 minutes (like on the website).
 
+Update 2019-01-27 : I replace `getthermostatsdata` (which is being [deprecated](https://dev.netatmo.com/resources/technical/reference/deprecated) by Netatmo) by `homesdata`.
+
 So I build mine :(.
 
 # Usage
@@ -55,8 +57,9 @@ The secrets can also be set with environment variables, see the help for more de
 ```bash
 seb@minus ~/src/netatmo2mqtt (git)-[master] # ./netatmo2MQTT.py --help
 usage: netatmo2MQTT.py [-h] -a NACLIENTSECRET -c NACLIENTID -r NAREFRESHTOKEN
-                       [-m HOST] [-n] [-o PREVIOUSFILENAME] [-s TOPIC]
-                       [-t TOPIC] [-T TOPIC] [-v]
+                       [-l LATESTREADINGURL] [-m HOST]
+                       [-n] [-o PREVIOUSFILENAME] [-s TOPIC] [-t TOPIC]
+                       [-T TOPIC] [-v]
 
 Read current temperature and setpoint from NetAtmo API and send them to a MQTT
 broker.
@@ -72,6 +75,9 @@ optional arguments:
   -r NAREFRESHTOKEN, --refresh-token NAREFRESHTOKEN
                         NetAtmo Refresh Token / Can also be read from
                         NETATMO_REFRESH_TOKEN en var. (default: None)
+  -l LATESTREADINGURL, --latest LATESTREADINGURL
+                        Url with latest reading timestamp already stored.
+                        (default: )
   -m HOST, --mqtt-host HOST
                         Specify the MQTT host to connect to. (default:
                         127.0.0.1)
@@ -95,7 +101,7 @@ optional arguments:
 
 ## Other things to know
 
-I personaly use cron to start this program so as I want to keep the latest timestamp received from the API, I store it by default in `/tmp/netatmo_last` (you can change it through a command line parameter.
+I personaly use cron to start this program so as I want to keep the latest timestamp received from the API, I store it by default in `/tmp/netatmo_last` (you can change it through a command line parameter. You can also initialize it with an URL (check the argument `-l`).
 
 ## Docker
 
