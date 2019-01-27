@@ -26,7 +26,10 @@ import requests                     # pip install requests
 import paho.mqtt.publish as publish # pip install paho-mqtt
 
 verbose = False
+NETATMO_BASE_URL = 'https://api.netatmo.com/api"
 NETATMO_GETTHERMOSTATDATA_URL = 'https://api.netatmo.com/api/getthermostatsdata?access_token={0}'
+NETATMO_HOMESDATA_URL = NETATMO_BASE_URL + '/homesdata'
+NETATMO_HOMESTATUS_URL = NETATMO_BASE_URL + '/homestatus'
 NETATMO_OAUTH_URL = 'https://api.netatmo.com/oauth2/token'
 NETATMO_GETMEASURE_URL = 'https://api.netatmo.com/api/getmeasure'
 
@@ -74,6 +77,8 @@ def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceI
     data = r.json()
     if r.status_code != 200:
       return (False, {"time": tstamp, "message": "NetAtmo error while getting all measures"})
+    if len(data['body']) == 0:
+      return (False, {"time": tstamp, "message": "No new data"}, {})
     temperatureList = []
     setpointList = []
     for measure in data['body']:
@@ -89,25 +94,16 @@ def getNetAtmoThermostat(oldTimestamp, naClientId, naClientSecret, naRefreshToke
   status, accessToken = getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken)
   if not status:
       return (False, accessToken, {})
-  naUrl = NETATMO_GETTHERMOSTATDATA_URL.format(accessToken)
-  debug ("Trying to get data from {0}".format(naUrl))
+  headers = {"Authorization":"Bearer " + accessToken}
   try:
-    r = requests.get(naUrl)
+    r = requests.get(NETATMO_HOMESDATA_URL, headers=headers)
     data = r.json()
-    if r.status_code != 200 or not 'devices' in data['body'] or not 'modules' in data['body']['devices'][0]:
+    if r.status_code != 200 or not 'homes' in data['body'] or not 'modules' in data['body']['homes'][0]:
       debug ("NetAtmo error while reading thermostat response {0}".format(json.dumps(data)))
       return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
-    latestTime = int(data['body']['devices'][0]['modules'][0]['measured']['time'])
-    newObject = [{"time": latestTime,
-                 "temp": data['body']['devices'][0]['modules'][0]['measured']['temperature']}]
-    setpointObject = [{"time": latestTime,
-                 "temp": data['body']['devices'][0]['modules'][0]['measured']['setpoint_temp']}]
-    if oldTimestamp > 0 and oldTimestamp < latestTime:
-      status, temperatureList, setpointList = getNetAtmoThermostatMeasure(oldTimestamp, latestTime, accessToken,
-        data['body']['devices'][0]['_id'], data['body']['devices'][0]['modules'][0]['_id'])
-      if status:
-        return (True, temperatureList, setpointList)
-    return (True, newObject, setpointObject)
+    status, temperatureList, setpointList = getNetAtmoThermostatMeasure(oldTimestamp, tstamp, accessToken,
+      data['body']['homes'][0]['modules'][0]['id'], data['body']['homes'][0]['modules'][1]['id'])
+    return (status, temperatureList, setpointList)
   except requests.exceptions.RequestException as e:
     return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
 
@@ -119,6 +115,8 @@ parser.add_argument('-c', '--client-id', dest='naClientId', action="store", help
                    **environ_or_required('NETATMO_CLIENT_ID'))
 parser.add_argument('-r', '--refresh-token', dest='naRefreshToken', action="store", help='NetAtmo Refresh Token / Can also be read from NETATMO_REFRESH_TOKEN en var.',
                    **environ_or_required('NETATMO_REFRESH_TOKEN'))
+parser.add_argument('-l', '--latest', dest='latestReadingUrl', action="store", default="",
+                   help='Url with latest reading timestamp already stored.')
 parser.add_argument('-m', '--mqtt-host', dest='host', action="store", default="127.0.0.1",
                    help='Specify the MQTT host to connect to.')
 parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", default=False,
@@ -141,7 +139,10 @@ verbose = args.verbose
 oldTimestamp = 0
 if os.path.isfile(args.previousFilename):
   oldTimestamp = int(open(args.previousFilename).read(10))
-
+else:
+  if args.latestReadingUrl:
+    r = requests.get(args.latestReadingUrl)
+    oldTimestamp = int(r.text)
 
 status, dataArray, dataSetpointArray = getNetAtmoThermostat(oldTimestamp, args.naClientId, args.naClientSecret, args.naRefreshToken)
 
