@@ -79,7 +79,8 @@ def getNetAtmoThermostat(naClientId, naClientSecret, naRefreshToken):
       return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
     newObject = {"time": tstamp, "temp": homeData['body']['home']['rooms'][0]['therm_measured_temperature']}
     newObjectSetpoint = {"time": tstamp, "temp": homeData['body']['home']['rooms'][0]['therm_setpoint_temperature']}
-    return (status, newObject, newObjectSetpoint)
+    boilerStatus = {"time": tstamp, "boilerStatus": homeData['body']['home']['modules'][1]['boiler_status']}
+    return (status, newObject, newObjectSetpoint, boilerStatus)
   except requests.exceptions.RequestException as e:
     return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
 
@@ -108,17 +109,20 @@ parser.add_argument('-v', '--verbose', dest='verbose', action="store_true", defa
 args = parser.parse_args()
 verbose = args.verbose
 
-status, data, dataSetpoint = getNetAtmoThermostat(args.naClientId, args.naClientSecret, args.naRefreshToken)
+status, data, dataSetpoint, boilerStatus = getNetAtmoThermostat(args.naClientId, args.naClientSecret, args.naRefreshToken)
 
 if status:
   jsonString = json.dumps(data)
   jsonStringSetpoint = json.dumps(dataSetpoint)
+  jsonStringBoiler = json.dumps(boilerStatus)
   debug("Success with message (for current temperature) <{0}>".format(jsonString))
   debug("Success with message (for setpoint temperature) <{0}>".format(jsonStringSetpoint))
+  debug("Success with message (for boilerStatus) <{0} ; boilerStatus={1}>".format(date_setpoint, boilerStatus["boilerStatus"])
 
   if not args.dryRun:
     publish.single(args.topic, jsonString, hostname=args.host)
     publish.single(args.topicSetpoint, jsonStringSetpoint, hostname=args.host)
+    publish.single(args.topicBoiler, jsonStringBoiler, hostname=args.host)
 else:
   jsonString = json.dumps(data)
   debug("Failure with message <{0}>".format(jsonString))
