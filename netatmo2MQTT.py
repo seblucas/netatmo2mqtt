@@ -30,6 +30,13 @@ NETATMO_BASE_URL = 'https://api.netatmo.com/api'
 NETATMO_HOMESDATA_URL = NETATMO_BASE_URL + '/homesdata'
 NETATMO_HOMESTATUS_URL = NETATMO_BASE_URL + '/homestatus'
 NETATMO_OAUTH_URL = 'https://api.netatmo.com/oauth2/token'
+COMMAND_LINE_KEYS = {
+  'temp': { 'mqttKey': 'temp', 'netatmoKey': 'therm_measured_temperature' },
+  'setpoint': { 'mqttKey': 'temp', 'netatmoKey': 'therm_setpoint_temperature' },
+  'boiler': { 'mqttKey': 'boiler', 'netatmoKey': '' },
+  'battery': { 'mqttKey': 'battery', 'netatmoKey': '' }
+}
+
 
 def debug(msg):
   if verbose:
@@ -71,17 +78,25 @@ def getNetAtmoThermostat(naClientId, naClientSecret, naRefreshToken):
     data = r.json()
     if r.status_code != 200 or not 'homes' in data['body'] or not 'modules' in data['body']['homes'][0]:
       debug ("NetAtmo error while reading homesdata response {0}".format(json.dumps(data)))
-      return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
+      return (False, {"time": tstamp, "message": "Netatmo data not well formed"})
     res = requests.get(NETATMO_HOMESTATUS_URL, headers=headers, params={ 'home_id': data['body']['homes'][0]['id'] })
     homeData = res.json()
     if res.status_code != 200 or not 'home' in homeData['body'] or not 'rooms' in homeData['body']['home']:
       debug ("NetAtmo error while reading homestatus response {0}".format(json.dumps(data)))
-      return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
-    newObject = {"time": tstamp, "temp": homeData['body']['home']['rooms'][0]['therm_measured_temperature']}
-    newObjectSetpoint = {"time": tstamp, "temp": homeData['body']['home']['rooms'][0]['therm_setpoint_temperature']}
-    return (status, newObject, newObjectSetpoint)
+      return (False, {"time": tstamp, "message": "Netatmo data not well formed"})
+    result = {}
+    for topicParam in args.topics:
+      key = topicParam.split(';')[0]
+      topic = topicParam.split(';')[1]
+      if not (topic in result):
+        result[topic] = { "time": tstamp }
+      if key in COMMAND_LINE_KEYS:
+        dataKey = COMMAND_LINE_KEYS[key]['mqttKey']
+        result[topic][dataKey] = homeData['body']['home']['rooms'][0][COMMAND_LINE_KEYS[key]['netatmoKey']]
+
+    return (status, result)
   except requests.exceptions.RequestException as e:
-    return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
+    return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)})
 
 
 parser = argparse.ArgumentParser(description='Read current temperature and setpoint from NetAtmo API and send them to a MQTT broker.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -97,8 +112,8 @@ parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", defau
                    help='No data will be sent to the MQTT broker.')
 parser.add_argument('-s', '--topic-setpoint', dest='topicSetpoint', action="store", default="sensor/setpoint", metavar="TOPIC",
                    help='The MQTT topic on which to publish the message with the current setpoint temperature (if it was a success)')
-parser.add_argument('-t', '--topic', dest='topic', action="store", default="sensor/mainroom",
-                   help='The MQTT topic on which to publish the message (if it was a success).')
+parser.add_argument('-t', '--topic', dest='topics', action="append",
+                   help='The information to send and the MQTT topic on which to publish the message (if it was a success) separated by a ;. Can be call many time')
 parser.add_argument('-T', '--topic-error', dest='topicError', action="store", default="error/sensor/mainroom", metavar="TOPIC",
                    help='The MQTT topic on which to publish the message (if it wasn\'t a success).')
 parser.add_argument('-v', '--verbose', dest='verbose', action="store_true", default=False,
@@ -108,19 +123,18 @@ parser.add_argument('-v', '--verbose', dest='verbose', action="store_true", defa
 args = parser.parse_args()
 verbose = args.verbose
 
-status, data, dataSetpoint = getNetAtmoThermostat(args.naClientId, args.naClientSecret, args.naRefreshToken)
+status, result = getNetAtmoThermostat(args.naClientId, args.naClientSecret, args.naRefreshToken)
 
 if status:
-  jsonString = json.dumps(data)
-  jsonStringSetpoint = json.dumps(dataSetpoint)
-  debug("Success with message (for current temperature) <{0}>".format(jsonString))
-  debug("Success with message (for setpoint temperature) <{0}>".format(jsonStringSetpoint))
+  for mqttTopic in result.keys():
+    mqttMessage = result[mqttTopic]
+    jsonString = json.dumps(mqttMessage)
+    debug("Success with message (for {0}) <{1}>".format(mqttTopic, jsonString))
 
-  if not args.dryRun:
-    publish.single(args.topic, jsonString, hostname=args.host)
-    publish.single(args.topicSetpoint, jsonStringSetpoint, hostname=args.host)
+    if not args.dryRun:
+      publish.single(mqttTopic, jsonString, hostname=args.host)
 else:
-  jsonString = json.dumps(data)
+  jsonString = json.dumps(result)
   debug("Failure with message <{0}>".format(jsonString))
   if not args.dryRun:
     publish.single(args.topicError, jsonString, hostname=args.host)
