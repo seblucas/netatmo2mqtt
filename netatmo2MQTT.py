@@ -116,6 +116,8 @@ parser.add_argument('-r', '--refresh-token', dest='naRefreshToken', action="stor
                    **environ_or_required('NETATMO_REFRESH_TOKEN'))
 parser.add_argument('-l', '--latest', dest='latestReadingUrl', action="store", default="",
                    help='Url with latest reading timestamp already stored.')
+parser.add_argument('-x', '--regex', dest='latestReadingRegex', action="store", default="",
+                   help='Regular expression to get latest reading time from url.')
 parser.add_argument('-m', '--mqtt-host', dest='host', action="store", default="127.0.0.1",
                    help='Specify the MQTT host to connect to.')
 parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", default=False,
@@ -138,10 +140,22 @@ verbose = args.verbose
 oldTimestamp = 0
 if os.path.isfile(args.previousFilename):
   oldTimestamp = int(open(args.previousFilename).read(10))
+  debug("Found last reading from file <{0}>".format(oldTimestamp))
 else:
   if args.latestReadingUrl:
     r = requests.get(args.latestReadingUrl)
-    oldTimestamp = int(r.text)
+    if args.latestReadingRegex:
+      m = re.search(args.latestReadingRegex, r.text)
+      if m:
+        oldTimestamp = int(m.group(1))
+        debug("Found last reading from url with regex <{0}>".format(oldTimestamp))
+    else:
+      oldTimestamp = int(r.text)
+      debug("Found last reading from url <{0}>".format(oldTimestamp))
+      
+if oldTimestamp == 0:
+  print("No old timestamp given exiting")
+  exit(0)
 
 status, dataArray, dataSetpointArray = getNetAtmoThermostat(oldTimestamp, args.naClientId, args.naClientSecret, args.naRefreshToken)
 
