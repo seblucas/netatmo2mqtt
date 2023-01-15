@@ -114,10 +114,10 @@ parser.add_argument('-c', '--client-id', dest='naClientId', action="store", help
                    **environ_or_required('NETATMO_CLIENT_ID'))
 parser.add_argument('-r', '--refresh-token', dest='naRefreshToken', action="store", help='NetAtmo Refresh Token / Can also be read from NETATMO_REFRESH_TOKEN en var.',
                    **environ_or_required('NETATMO_REFRESH_TOKEN'))
-parser.add_argument('-l', '--latest', dest='latestReadingUrl', action="store", default="",
-                   help='Url with latest reading timestamp already stored.')
-parser.add_argument('-x', '--regex', dest='latestReadingRegex', action="store", default="",
-                   help='Regular expression to get latest reading time from url.')
+parser.add_argument('-l', '--latest', dest='latestReadingUrl', action="store", help='Url with latest reading timestamp already stored.',
+                   **environ_or_required('TIMESTAMP_URL'))
+parser.add_argument('-x', '--regex', dest='latestReadingRegex', action="store", help='Regular expression to get latest reading time from url.',
+                   **environ_or_required('TIMESTAMP_REGEX'))
 parser.add_argument('-m', '--mqtt-host', dest='host', action="store", default="127.0.0.1",
                    help='Specify the MQTT host to connect to.')
 parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", default=False,
