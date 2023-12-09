@@ -56,10 +56,10 @@ def getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken):
     data = r.json()
     if r.status_code != 200 or not 'access_token' in data:
       debug ("NetAtmo error while refreshing access token {0}".format(json.dumps(data)))
-      return (False, {"time": tstamp, "message": "NetAtmo error while refreshing access token"})
-    return (True, data['access_token'])
+      return (False, {"time": tstamp, "message": "NetAtmo error while refreshing access token"}, '')
+    return (True, data['access_token'], data['refresh_token'])
   except requests.exceptions.RequestException as e:
-    return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)})
+    return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, '')
 
 def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceId, moduleId, tstamp):
   params = {
@@ -90,21 +90,21 @@ def getNetAtmoThermostatMeasure(oldTimestamp, newTimestamp, accessToken, deviceI
 
 def getNetAtmoThermostat(oldTimestamp, naClientId, naClientSecret, naRefreshToken):
   tstamp = int(time.time())
-  status, accessToken = getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken)
+  status, accessToken, refreshToken = getNetAtmoAccessToken(naClientId, naClientSecret, naRefreshToken)
   if not status:
-      return (False, accessToken, {})
+      return (False, refreshToken, {"time": tstamp, "message": "Unable to get access token from NetAtmo" },  {})
   headers = {"Authorization":"Bearer " + accessToken}
   try:
     r = requests.get(NETATMO_HOMESDATA_URL, headers=headers)
     data = r.json()
     if r.status_code != 200 or not 'homes' in data['body'] or not 'modules' in data['body']['homes'][0]:
       debug ("NetAtmo error while reading thermostat response {0}".format(json.dumps(data)))
-      return (False, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
+      return (False, refreshToken, {"time": tstamp, "message": "Netatmo data not well formed"}, {})
     status, temperatureList, setpointList = getNetAtmoThermostatMeasure(oldTimestamp, tstamp, accessToken,
       data['body']['homes'][0]['modules'][0]['id'], data['body']['homes'][0]['modules'][1]['id'], tstamp)
-    return (status, temperatureList, setpointList)
+    return (status, refreshToken, temperatureList, setpointList)
   except requests.exceptions.RequestException as e:
-    return (False, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
+    return (False, refreshToken, {"time": tstamp, "message": "NetAtmo not available : " + str(e)}, {})
 
 
 parser = argparse.ArgumentParser(description='Read current temperature and setpoint from NetAtmo API and send them to a MQTT broker.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -124,6 +124,8 @@ parser.add_argument('-n', '--dry-run', dest='dryRun', action="store_true", defau
                    help='No data will be sent to the MQTT broker.')
 parser.add_argument('-o', '--last-time', dest='previousFilename', action="store", default="/tmp/netatmo_last",
                    help='The file where the last timestamp coming from NetAtmo API will be saved')
+parser.add_argument('-u', '--updated-refresh', dest='updatedRefreshFilename', action="store", default="/tmp/netatmo_last_refresh",
+                   help='The file where the last refresh token coming from NetAtmo API will be saved')
 parser.add_argument('-s', '--topic-setpoint', dest='topicSetpoint', action="store", default="sensor/setpoint", metavar="TOPIC",
                    help='The MQTT topic on which to publish the message with the current setpoint temperature (if it was a success)')
 parser.add_argument('-t', '--topic', dest='topic', action="store", default="sensor/mainroom",
@@ -139,7 +141,8 @@ verbose = args.verbose
 
 oldTimestamp = 0
 if os.path.isfile(args.previousFilename):
-  oldTimestamp = int(open(args.previousFilename).read(10))
+  with open(args.previousFilename, 'r') as f:
+    oldTimestamp = int(f.read(10))
   debug("Found last reading from file <{0}>".format(oldTimestamp))
 else:
   if args.latestReadingUrl:
@@ -157,7 +160,15 @@ if oldTimestamp == 0:
   print("No old timestamp given exiting")
   exit(0)
 
-status, dataArray, dataSetpointArray = getNetAtmoThermostat(oldTimestamp, args.naClientId, args.naClientSecret, args.naRefreshToken)
+if os.path.isfile(args.updatedRefreshFilename):
+  with open(args.updatedRefreshFilename, 'r') as f:
+    args.naRefreshToken = f.read()
+
+status, updatedRefreshToken, dataArray, dataSetpointArray = getNetAtmoThermostat(oldTimestamp, args.naClientId, args.naClientSecret, args.naRefreshToken)
+
+if updatedRefreshToken:
+  with open(args.updatedRefreshFilename, 'w') as f:
+      f.write(updatedRefreshToken)
 
 if status:
   for data, dataSetpoint in zip(dataArray, dataSetpointArray):
@@ -176,7 +187,7 @@ if status:
     if not args.dryRun:
       publish.single(args.topic, jsonString, hostname=args.host)
       publish.single(args.topicSetpoint, jsonStringSetpoint, hostname=args.host)
-    time.sleep(1)
+    time.sleep(0.5)
 else:
   jsonString = json.dumps(dataArray)
   debug("Failure with message <{0}>".format(jsonString))

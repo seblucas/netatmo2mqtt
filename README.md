@@ -10,7 +10,7 @@ The main reason is security : most of the tools I reviewed are still asking for 
 
 The other reason is that the thermostat is synchronized [only every hour](https://dev.netatmo.com/resources/technical/guides/ratelimits) so simply using [getthermostatsdata](https://dev.netatmo.com/resources/technical/reference/thermostat/getthermostatsdata) was not enough for me (make a graph with a measure every hour is not very precise). So I finally used [getmeasure](https://dev.netatmo.com/resources/technical/reference/common/getmeasure) in addition to provide all the missing detail with a measure every 10 minutes (like on the website).
 
-Update 2019-01-27 : I replace `getthermostatsdata` (which is being [deprecated](https://dev.netatmo.com/resources/technical/reference/deprecated) by Netatmo) by `homesdata`.
+Update 2019-01-27 : I replaced `getthermostatsdata` (which is being [deprecated](https://dev.netatmo.com/resources/technical/reference/deprecated) by Netatmo) by `homesdata`.
 
 So I build mine :(.
 
@@ -56,46 +56,36 @@ The secrets can also be set with environment variables, see the help for more de
 
 ```bash
 seb@minus ~/src/netatmo2mqtt (git)-[master] # ./netatmo2MQTT.py --help
-usage: netatmo2MQTT.py [-h] -a NACLIENTSECRET -c NACLIENTID -r NAREFRESHTOKEN
-                       [-l LATESTREADINGURL] [-m HOST]
-                       [-n] [-o PREVIOUSFILENAME] [-s TOPIC] [-t TOPIC]
+usage: netatmo2MQTT.py [-h] -a NACLIENTSECRET -c NACLIENTID -r NAREFRESHTOKEN -l LATESTREADINGURL -x LATESTREADINGREGEX [-m HOST] [-n] [-o PREVIOUSFILENAME] [-u UPDATEDREFRESHFILENAME] [-s TOPIC] [-t TOPIC]
                        [-T TOPIC] [-v]
 
-Read current temperature and setpoint from NetAtmo API and send them to a MQTT
-broker.
+Read current temperature and setpoint from NetAtmo API and send them to a MQTT broker.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -a NACLIENTSECRET, --client-secret NACLIENTSECRET
-                        NetAtmo Client Secret / Can also be read from
-                        NETATMO_CLIENT_SECRET env var. (default: None)
+                        NetAtmo Client Secret / Can also be read from NETATMO_CLIENT_SECRET env var. (default: None)
   -c NACLIENTID, --client-id NACLIENTID
-                        NetAtmo Client ID / Can also be read from
-                        NETATMO_CLIENT_ID en var. (default: None)
+                        NetAtmo Client ID / Can also be read from NETATMO_CLIENT_ID en var. (default: None)
   -r NAREFRESHTOKEN, --refresh-token NAREFRESHTOKEN
-                        NetAtmo Refresh Token / Can also be read from
-                        NETATMO_REFRESH_TOKEN en var. (default: None)
+                        NetAtmo Refresh Token / Can also be read from NETATMO_REFRESH_TOKEN en var. (default: None)
   -l LATESTREADINGURL, --latest LATESTREADINGURL
-                        Url with latest reading timestamp already stored.
-                        (default: )
+                        Url with latest reading timestamp already stored. (default: None)
+  -x LATESTREADINGREGEX, --regex LATESTREADINGREGEX
+                        Regular expression to get latest reading time from url. (default: None)
   -m HOST, --mqtt-host HOST
-                        Specify the MQTT host to connect to. (default:
-                        127.0.0.1)
-  -n, --dry-run         No data will be sent to the MQTT broker. (default:
-                        False)
+                        Specify the MQTT host to connect to. (default: 127.0.0.1)
+  -n, --dry-run         No data will be sent to the MQTT broker. (default: False)
   -o PREVIOUSFILENAME, --last-time PREVIOUSFILENAME
-                        The file where the last timestamp coming from NetAtmo
-                        API will be saved (default: /tmp/netatmo_last)
+                        The file where the last timestamp coming from NetAtmo API will be saved (default: /tmp/netatmo_last)
+  -u UPDATEDREFRESHFILENAME, --updated-refresh UPDATEDREFRESHFILENAME
+                        The file where the last refresh token coming from NetAtmo API will be saved (default: /tmp/netatmo_last_refresh)
   -s TOPIC, --topic-setpoint TOPIC
-                        The MQTT topic on which to publish the message with
-                        the current setpoint temperature (if it was a success)
-                        (default: sensor/setpoint)
+                        The MQTT topic on which to publish the message with the current setpoint temperature (if it was a success) (default: sensor/setpoint)
   -t TOPIC, --topic TOPIC
-                        The MQTT topic on which to publish the message (if it
-                        was a success). (default: sensor/mainroom)
+                        The MQTT topic on which to publish the message (if it was a success). (default: sensor/mainroom)
   -T TOPIC, --topic-error TOPIC
-                        The MQTT topic on which to publish the message (if it
-                        wasn't a success). (default: error/sensor/mainroom)
+                        The MQTT topic on which to publish the message (if it wasn't a success). (default: error/sensor/mainroom)
   -v, --verbose         Enable debug messages. (default: False)
 ```
 
